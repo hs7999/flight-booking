@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flight Booking System</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+  </head>
+  <style>
+    #flights {
+      width: auto; /* Adjusts width dynamically */
+      min-width: 800px; /* Ensures it's not too small */
+      max-width: 100%;
+    }
+  </style>
+  <body class="container mt-4">
+    <h2 class="text-center">Flight Booking System</h2>
+    <h6 class="text-center">Mumbai - Delhi (April 2025)</h6>
+    <br />
+    <!-- Time Inputs -->
+    <div class="row mb-3">
+      <div class="col-md-5">
+        <label for="start_time" class="form-label">Start Time:</label>
+        <input
+          type="datetime-local"
+          id="start_time"
+          class="form-control"
+          required
+          value="2025-04-01T00:00"
+        />
+      </div>
+      <div class="col-md-5">
+        <label for="end_time" class="form-label">End Time:</label>
+        <input
+          type="datetime-local"
+          id="end_time"
+          class="form-control"
+          required
+          value="2025-05-01T00:00"
+        />
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100" onclick="fetchFlights()">
+          Fetch Flights
+        </button>
+      </div>
+    </div>
+
+    <!-- Available Flights Dropdown -->
+    <div class="mb-3">
+      <label for="flights" class="form-label">Available Flights:</label>
+      <select
+        id="flights"
+        class="form-select"
+        onchange="storeSelectedFlightId()"
+      >
+        <option value="">Select a flight</option>
+      </select>
+    </div>
+
+    <!-- Booking Form -->
+    <!-- <h3>Book a Flight</h3> -->
+    <label for="start_time" class="form-label">Passenger Details</label>
+    <div class="mb-3">
+      <input type="text" id="name" class="form-control" placeholder="Name" />
+    </div>
+    <div class="mb-3">
+      <input type="email" id="email" class="form-control" placeholder="Email" />
+    </div>
+    <div class="mb-3">
+      <input
+        type="number"
+        id="seats"
+        class="form-control"
+        placeholder="Seats"
+      />
+    </div>
+    <button class="btn btn-primary" onclick="bookFlight()">Book Flight</button>
+
+    <!-- Fetch Booking -->
+    <h3 class="mt-4">Fetch Booking Details</h3>
+    <div class="row mb-3">
+      <div class="col-md-8">
+        <input
+          type="number"
+          id="booking-id"
+          class="form-control"
+          placeholder="Enter Booking ID"
+        />
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-info w-100" onclick="fetchBooking()">
+          Get Booking
+        </button>
+      </div>
+      <div class="col-md-2">
+        <button
+          class="btn btn-secondary w-100"
+          onclick="fetchBooking(allBooking=true)"
+        >
+          Get All Bookings
+        </button>
+      </div>
+    </div>
+    <!-- <button class="btn btn-danger" onclick="deleteBooking()">Delete Booking</button> -->
+
+    <!-- Display Booking Details -->
+    <div id="booking-details" class="mt-3"></div>
+
+    <!-- Error Message -->
+    <div
+      id="error-message"
+      class="alert alert-danger mt-3"
+      style="display: none"
+    ></div>
+
+    <script>
+      const API_BASE_URL = "http://127.0.0.1:8000"; // Adjust as needed
+      // const API_BASE_URL =
+      //   "https://7aa0-2406-7400-63-19b-b90d-3cd2-dd15-8bd4.ngrok-free.app"; // Adjust as needed
+      let selectedFlightId = null;
+
+      // Fetch flights and populate dropdown
+      async function fetchFlights() {
+        const startTime = document.getElementById("start_time").value;
+        const endTime = document.getElementById("end_time").value;
+
+        if (!startTime || !endTime) {
+          alert("Please enter both start time and end time.");
+          return;
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/flights?start_time=${encodeURIComponent(
+            startTime
+          )}&end_time=${encodeURIComponent(endTime)}`
+        );
+        const flights = await response.json();
+
+        const flightsDropdown = document.getElementById("flights");
+        flightsDropdown.innerHTML = '<option value="">Select a flight</option>'; // Clear previous options
+
+        flights.forEach((flight) => {
+          const option = document.createElement("option");
+          option.value = flight.id;
+          option.text = `${flight.flight} Departure: ${flight.departure_time} Arrival: ${flight.arrival_time} Cost: Rs.${flight.price} (Seats left: ${flight.seats_left})`;
+          flightsDropdown.appendChild(option);
+        });
+      }
+
+      // Store the selected flight ID
+      function storeSelectedFlightId() {
+        const flightsDropdown = document.getElementById("flights");
+        selectedFlightId = flightsDropdown.value;
+        console.log("Selected Flight ID:", selectedFlightId);
+      }
+
+      // Book a flight
+      function bookFlight() {
+        const name = document.getElementById("name").value;
+        const email = document.getElementById("email").value;
+        const seats = document.getElementById("seats").value;
+        const flight_id = selectedFlightId;
+
+        if (!name || !email || !seats || !flight_id) {
+          alert("Please fill all fields.");
+          return;
+        }
+
+        fetch(`${API_BASE_URL}/book-flight`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            seats: parseInt(seats),
+            flight_id,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            alert(`${data.message} (id: ${data.booking_id})`);
+          })
+          .catch(() => showError("Booking failed. Please check inputs."));
+      }
+
+      // Fetch booking details
+      function fetchBooking(allBooking = false) {
+        for (let i = 0; i < 1; i++) {
+          let url = `${API_BASE_URL}/bookings/`;
+          if (!allBooking) {
+            const bookingId = document.getElementById("booking-id").value;
+            if (!bookingId) {
+              alert("Please enter a booking ID.");
+              return;
+            }
+            url += bookingId;
+          }
+          // fetch(`${API_BASE_URL}/bookings/${bookingId}`)
+          fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+              const bookingDetailsDiv =
+                document.getElementById("booking-details");
+              bookingDetailsDiv.innerHTML = ""; // Clear previous details
+              console.log("IN FETCH BOOKING", data);
+              data.forEach((booking) => {
+                const bookingCard = document.createElement("div");
+                bookingCard.className = "card mb-3";
+                bookingCard.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">Booking ID: ${booking.booking_id}</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="card-text"><strong>Name:</strong> ${booking.name}</p>
+                                <p class="card-text"><strong>Email:</strong> ${booking.email}</p>
+                                <p class="card-text"><strong>Flight:</strong> ${booking.flight_details.flight}</p>
+                                <p class="card-text"><strong>Seats:</strong> ${booking.seats}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="card-text"><strong>Cost:</strong> ${booking.flight_details.price}</p>
+                                <p class="card-text"><strong>Departure Time:</strong> ${booking.flight_details.departure_time}</p>
+                                <p class="card-text"><strong>Arrival Time:</strong> ${booking.flight_details.arrival_time}</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-danger mt-2" onclick="deleteBooking(${booking.booking_id})">Delete</button>
+                    </div>
+                `;
+
+                bookingDetailsDiv.appendChild(bookingCard);
+              });
+            })
+            // .catch(() => showError("Invalid booking ID"));
+            .catch(() => {
+              alert("Unable to fetch booking");
+            });
+        }
+      }
+
+      // Delete a booking
+      function deleteBooking(bookingId) {
+        // const bookingId = document.getElementById("booking-id").value;
+        for (let i = 0; i < 2; i++) {
+          fetch(`${API_BASE_URL}/booking/${bookingId}`, { method: "DELETE" })
+            .then(() => {
+              alert("Booking deleted successfully!");
+              document.getElementById("booking-details").innerHTML = "";
+            })
+            .catch(() => showError("Failed to delete booking"));
+        }
+      }
+
+      // Show error message
+      function showError(message) {
+        const errorDiv = document.getElementById("error-message");
+        errorDiv.innerText = message;
+        errorDiv.style.display = "block";
+        setTimeout(() => {
+          errorDiv.style.display = "none";
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>
